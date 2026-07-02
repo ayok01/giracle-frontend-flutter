@@ -6,6 +6,7 @@ import 'screens/channel_browser_screen.dart';
 import 'screens/channel_screen.dart';
 import 'screens/config_screen.dart';
 import 'screens/home_screen.dart';
+import 'screens/inbox_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/splash_screen.dart';
 
@@ -41,6 +42,7 @@ class _GiracleAppState extends ConsumerState<GiracleApp> {
               builder: (_, __) => const ChannelBrowserScreen(),
             ),
             GoRoute(path: 'config', builder: (_, __) => const ConfigScreen()),
+            GoRoute(path: 'inbox', builder: (_, __) => const InboxScreen()),
           ],
         ),
       ],

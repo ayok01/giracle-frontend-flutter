@@ -281,6 +281,22 @@ final historyProvider =
     StateNotifierProvider<HistoryNotifier, Map<String, HistoryEntry>>(
         (ref) => HistoryNotifier());
 
+class InboxNotifier extends StateNotifier<List<InboxItem>> {
+  InboxNotifier() : super(const []);
+  void set(List<InboxItem> v) => state = v;
+  void add(InboxItem item) {
+    if (state.any((e) => e.messageId == item.messageId)) return;
+    state = [...state, item];
+  }
+
+  void removeByMessage(String messageId) {
+    state = state.where((e) => e.messageId != messageId).toList();
+  }
+}
+
+final inboxProvider =
+    StateNotifierProvider<InboxNotifier, List<InboxItem>>((ref) => InboxNotifier());
+
 class OnlineUsersNotifier extends StateNotifier<Set<String>> {
   OnlineUsersNotifier() : super(const {});
   void set(Iterable<String> ids) => state = ids.toSet();

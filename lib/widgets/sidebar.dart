@@ -39,6 +39,46 @@ class GiracleSidebar extends ConsumerWidget {
             ),
             const Divider(),
             ListTile(
+              leading: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  const Icon(Icons.notifications_outlined),
+                  Consumer(
+                    builder: (_, ref, __) {
+                      final count = ref.watch(inboxProvider).length;
+                      if (count == 0) return const SizedBox.shrink();
+                      return Positioned(
+                        right: -6,
+                        top: -6,
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: const BoxDecoration(
+                            color: Colors.red,
+                            shape: BoxShape.circle,
+                          ),
+                          constraints:
+                              const BoxConstraints(minWidth: 16, minHeight: 16),
+                          child: Text(
+                            '$count',
+                            style: const TextStyle(
+                              fontSize: 10,
+                              color: Colors.white,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
+              title: const Text('通知'),
+              onTap: () {
+                Navigator.of(context).pop();
+                context.go('/app/inbox');
+              },
+            ),
+            ListTile(
               leading: const Icon(Icons.list),
               title: const Text('チャンネル一覧'),
               onTap: () {

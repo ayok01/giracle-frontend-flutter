@@ -48,6 +48,13 @@ Future<void> initLoad(WidgetRef ref, String userId,
     debugPrint('initLoad online users err: $e');
   }
 
+  try {
+    final inbox = await ref.read(messageApiProvider).inbox();
+    ref.read(inboxProvider.notifier).set(inbox);
+  } catch (e) {
+    debugPrint('initLoad inbox err: $e');
+  }
+
   ref.read(appStatusProvider.notifier).setLoggedIn(true);
 
   if (initWsToo) {
@@ -115,6 +122,32 @@ void _handleWsEvent(WidgetRef ref, WsEvent event) {
               actorUserId: actorId,
               myUserId: myId,
             );
+      }
+      break;
+    case 'inbox::Added':
+      if (data is Map<String, dynamic>) {
+        try {
+          final type = data['type'] as String? ?? 'mention';
+          final msg =
+              Message.fromJson(data['message'] as Map<String, dynamic>);
+          ref.read(inboxProvider.notifier).add(InboxItem(
+                type: type,
+                userId: '',
+                messageId: msg.id,
+                message: msg,
+                happenedAt: msg.createdAt,
+              ));
+        } catch (e) {
+          debugPrint('inbox::Added decode err: $e');
+        }
+      }
+      break;
+    case 'inbox::Deleted':
+      if (data is Map<String, dynamic>) {
+        final id = data['messageId'] as String?;
+        if (id != null) {
+          ref.read(inboxProvider.notifier).removeByMessage(id);
+        }
       }
       break;
     case 'user::Connected':

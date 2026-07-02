@@ -49,6 +49,9 @@ class MessageApi {
         .toList();
   }
 
+  Future<void> markInboxRead(String messageId) =>
+      _api.postJson('/message/inbox/read', body: {'messageId': messageId});
+
   Future<void> updateReadTime(String channelId, String readTime) =>
       _api.postJson('/message/update-readtime',
           body: {'channelId': channelId, 'readTime': readTime});
