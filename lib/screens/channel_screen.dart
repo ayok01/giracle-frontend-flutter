@@ -548,6 +548,16 @@ class _ChannelScreenState extends ConsumerState<ChannelScreen> {
                         );
                       }
                       final m = entry.history[i];
+                      final older = i + 1 < entry.history.length
+                          ? entry.history[i + 1]
+                          : null;
+                      final sameSenderAsOlder = older != null &&
+                          older.userId == m.userId &&
+                          m.createdAt
+                                  .difference(older.createdAt)
+                                  .inMinutes
+                                  .abs() <=
+                              5;
                       final replyTarget = m.replyingMessageId == null
                           ? null
                           : _findMessage(m.replyingMessageId!);
@@ -557,6 +567,7 @@ class _ChannelScreenState extends ConsumerState<ChannelScreen> {
                         senderName: userCache[m.userId]?.name ?? m.userId,
                         baseUrl: ref.read(apiClientProvider).baseUrl,
                         customEmojiCodes: emojiMap.keys.toSet(),
+                        showAvatar: !sameSenderAsOlder,
                         replyTarget: replyTarget,
                         replyTargetSenderName: replyTarget == null
                             ? null
@@ -724,6 +735,7 @@ class MessageBubble extends StatelessWidget {
     required this.senderName,
     required this.baseUrl,
     required this.customEmojiCodes,
+    required this.showAvatar,
     required this.onFetchUser,
     required this.onLongPress,
     required this.onToggleReaction,
@@ -737,6 +749,7 @@ class MessageBubble extends StatelessWidget {
   final String senderName;
   final String baseUrl;
   final Set<String> customEmojiCodes;
+  final bool showAvatar;
   final Message? replyTarget;
   final String? replyTargetSenderName;
   final VoidCallback onFetchUser;
@@ -745,123 +758,261 @@ class MessageBubble extends StatelessWidget {
   final VoidCallback onAddReaction;
   final VoidCallback onSenderTap;
 
+  String _smartTime(DateTime dt) {
+    final t = dt.toLocal();
+    final now = DateTime.now();
+    if (t.year != now.year) return DateFormat('yyyy/M/d HH:mm').format(t);
+    if (t.month != now.month || t.day != now.day) {
+      return DateFormat('M/d HH:mm').format(t);
+    }
+    return DateFormat('HH:mm:ss').format(t);
+  }
+
   @override
   Widget build(BuildContext context) {
     onFetchUser();
-    final ts = DateFormat('HH:mm').format(message.createdAt.toLocal());
+    final theme = Theme.of(context);
+    // avatar column: 40px + 5px gap = 45px (matches Solid `w-[40px]` + gap).
+    const avatarColumn = 40.0;
+    const gap = 5.0;
+
     return InkWell(
       onLongPress: onLongPress,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        padding: EdgeInsets.fromLTRB(
+            12, showAvatar ? 8 : 1, 12, 1),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (replyTarget != null)
-              Container(
-                margin: const EdgeInsets.only(bottom: 4),
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  border: Border(
-                    left: BorderSide(
-                      color: Theme.of(context).colorScheme.primary,
-                      width: 3,
-                    ),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.reply, size: 14),
-                    const SizedBox(width: 4),
-                    Text(
+              Padding(
+                padding: const EdgeInsets.only(
+                    left: avatarColumn + gap, bottom: 2),
+                child: _ReplyLine(
+                  target: replyTarget!,
+                  senderName:
                       replyTargetSenderName ?? replyTarget!.userId,
-                      style: Theme.of(context)
-                          .textTheme
-                          .bodySmall
-                          ?.copyWith(fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Text(
-                        replyTarget!.content,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                    ),
-                  ],
+                  baseUrl: baseUrl,
                 ),
               ),
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                InkWell(
-                  onTap: onSenderTap,
-                  child: Text(senderName,
-                      style: const TextStyle(fontWeight: FontWeight.bold)),
+                SizedBox(
+                  width: avatarColumn,
+                  child: showAvatar
+                      ? GestureDetector(
+                          onTap: onSenderTap,
+                          child: AuthedAvatar(
+                            url: '$baseUrl/user/icon/${message.userId}',
+                            radius: 20,
+                            fallback: Text(
+                              message.userId.isNotEmpty
+                                  ? message.userId
+                                      .substring(0, message.userId.length > 2 ? 2 : 1)
+                                      .toUpperCase()
+                                  : '?',
+                            ),
+                          ),
+                        )
+                      : const SizedBox.shrink(),
                 ),
-                const SizedBox(width: 8),
-                Text(ts, style: Theme.of(context).textTheme.bodySmall),
-                if (message.isEdited) ...[
-                  const SizedBox(width: 4),
-                  Text('(編集済み)',
-                      style: Theme.of(context).textTheme.bodySmall),
-                ],
+                const SizedBox(width: gap),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (showAvatar)
+                        InkWell(
+                          onTap: onSenderTap,
+                          child: Row(
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  senderName,
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.bold),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                _smartTime(message.createdAt),
+                                style: theme.textTheme.bodySmall,
+                              ),
+                            ],
+                          ),
+                        ),
+                      if (message.content.isNotEmpty)
+                        Padding(
+                          padding: EdgeInsets.only(
+                              top: showAvatar ? 2 : 0),
+                          child: SelectableText(message.content),
+                        ),
+                      if (message.files.isNotEmpty)
+                        MessageAttachments(
+                            files: message.files, baseUrl: baseUrl),
+                      if (message.urlPreviews.isNotEmpty)
+                        MessageUrlPreviews(previews: message.urlPreviews),
+                      if (message.isEdited)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 2),
+                          child: Text(
+                            '編集済み',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.outline,
+                            ),
+                          ),
+                        ),
+                      if (message.reactionSummary.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Wrap(
+                            spacing: 4,
+                            runSpacing: 4,
+                            children: [
+                              ...message.reactionSummary.map((r) {
+                                final isCustom =
+                                    customEmojiCodes.contains(r.emojiCode);
+                                return _ReactionChip(
+                                  code: r.emojiCode,
+                                  count: r.count,
+                                  includingYou: r.includingYou,
+                                  isCustom: isCustom,
+                                  baseUrl: baseUrl,
+                                  onTap: () =>
+                                      onToggleReaction(r.emojiCode),
+                                );
+                              }),
+                              InkWell(
+                                onTap: onAddReaction,
+                                borderRadius: BorderRadius.circular(6),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 6, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    border: Border.all(
+                                        color: theme.colorScheme.outlineVariant),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: const Icon(Icons.add, size: 14),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
               ],
             ),
-            const SizedBox(height: 2),
-            SelectableText(message.content),
-            if (message.files.isNotEmpty)
-              MessageAttachments(files: message.files, baseUrl: baseUrl),
-            if (message.urlPreviews.isNotEmpty)
-              MessageUrlPreviews(previews: message.urlPreviews),
-            Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Wrap(
-                spacing: 4,
-                runSpacing: 4,
-                children: [
-                  ...message.reactionSummary.map((r) {
-                    final theme = Theme.of(context);
-                    final isCustom = customEmojiCodes.contains(r.emojiCode);
-                    return InputChip(
-                      padding: EdgeInsets.zero,
-                      visualDensity: VisualDensity.compact,
-                      selected: r.includingYou,
-                      showCheckmark: false,
-                      backgroundColor: r.includingYou
-                          ? theme.colorScheme.primaryContainer
-                          : null,
-                      label: isCustom
-                          ? Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                SizedBox(
-                                  height: 18,
-                                  child: AuthedNetworkImage(
-                                    url:
-                                        '$baseUrl/server/custom-emoji/${r.emojiCode}',
-                                    height: 18,
-                                    errorWidget: (_, __) =>
-                                        Text(':${r.emojiCode}:'),
-                                  ),
-                                ),
-                                const SizedBox(width: 4),
-                                Text('${r.count}'),
-                              ],
-                            )
-                          : Text('${r.emojiCode} ${r.count}'),
-                      onSelected: (_) => onToggleReaction(r.emojiCode),
-                    );
-                  }),
-                  if (message.reactionSummary.isNotEmpty)
-                    ActionChip(
-                      padding: EdgeInsets.zero,
-                      visualDensity: VisualDensity.compact,
-                      avatar: const Icon(Icons.add, size: 14),
-                      label: const Text(''),
-                      onPressed: onAddReaction,
-                    ),
-                ],
-              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ReplyLine extends StatelessWidget {
+  const _ReplyLine({
+    required this.target,
+    required this.senderName,
+    required this.baseUrl,
+  });
+  final Message target;
+  final String senderName;
+  final String baseUrl;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Row(
+      children: [
+        Icon(Icons.subdirectory_arrow_right,
+            size: 16, color: theme.colorScheme.outline),
+        const SizedBox(width: 4),
+        AuthedAvatar(
+          url: '$baseUrl/user/icon/${target.userId}',
+          radius: 10,
+          fallback: Text(
+            target.userId.isNotEmpty ? target.userId[0].toUpperCase() : '?',
+            style: const TextStyle(fontSize: 10),
+          ),
+        ),
+        const SizedBox(width: 4),
+        Text(
+          senderName,
+          style: theme.textTheme.bodySmall
+              ?.copyWith(fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Text(
+            target.content,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: theme.textTheme.bodySmall
+                ?.copyWith(color: theme.colorScheme.outline),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ReactionChip extends StatelessWidget {
+  const _ReactionChip({
+    required this.code,
+    required this.count,
+    required this.includingYou,
+    required this.isCustom,
+    required this.baseUrl,
+    required this.onTap,
+  });
+  final String code;
+  final int count;
+  final bool includingYou;
+  final bool isCustom;
+  final String baseUrl;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(6),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+        decoration: BoxDecoration(
+          color: includingYou
+              ? theme.colorScheme.primaryContainer
+              : theme.colorScheme.surfaceContainerHighest,
+          border: Border.all(
+            color: includingYou
+                ? theme.colorScheme.primary
+                : theme.colorScheme.outlineVariant,
+          ),
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (isCustom)
+              SizedBox(
+                height: 18,
+                child: AuthedNetworkImage(
+                  url: '$baseUrl/server/custom-emoji/$code',
+                  height: 18,
+                  errorWidget: (_, __) => Text(':$code:'),
+                ),
+              )
+            else
+              Text(code, style: const TextStyle(fontSize: 14)),
+            const SizedBox(width: 4),
+            Text(
+              '$count',
+              style: theme.textTheme.bodySmall,
             ),
           ],
         ),
