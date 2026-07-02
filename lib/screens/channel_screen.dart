@@ -73,6 +73,11 @@ class _ChannelScreenState extends ConsumerState<ChannelScreen> {
         final info = await ref.read(channelApiProvider).info(widget.channelId);
         ref.read(channelInfoProvider.notifier).upsert(info);
       } catch (_) {}
+      // If we hit the latest, mark this channel read.
+      if (res.history.isNotEmpty && res.atEnd) {
+        final newest = res.history.first.createdAt.toIso8601String();
+        _markRead(newest);
+      }
     } on ApiException catch (e) {
       setState(() => _error = e.message);
     } finally {
@@ -267,6 +272,20 @@ class _ChannelScreenState extends ConsumerState<ChannelScreen> {
             .showSnackBar(SnackBar(content: Text(e.message)));
       }
     }
+  }
+
+  Future<void> _markRead(String readTime) async {
+    try {
+      await ref
+          .read(messageApiProvider)
+          .updateReadTime(widget.channelId, readTime);
+      ref
+          .read(readTimeProvider.notifier)
+          .update(widget.channelId, readTime);
+      ref
+          .read(hasNewMessageProvider.notifier)
+          .mark(widget.channelId, false);
+    } catch (_) {}
   }
 
   Future<void> _joinChannel() async {

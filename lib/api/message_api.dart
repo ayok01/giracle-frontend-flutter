@@ -53,8 +53,24 @@ class MessageApi {
       _api.postJson('/message/inbox/read', body: {'messageId': messageId});
 
   Future<void> updateReadTime(String channelId, String readTime) =>
-      _api.postJson('/message/update-readtime',
+      _api.postJson('/message/read-time/update',
           body: {'channelId': channelId, 'readTime': readTime});
+
+  Future<Map<String, String>> getReadTimes() async {
+    final json = await _api.getJson('/message/read-time/get');
+    final list = json['data'] as List<dynamic>? ?? [];
+    return {
+      for (final e in list)
+        (e as Map<String, dynamic>)['channelId'] as String:
+            e['readTime'] as String,
+    };
+  }
+
+  Future<Map<String, bool>> getNewFlags() async {
+    final json = await _api.getJson('/message/get-new');
+    final map = json['data'] as Map<String, dynamic>? ?? {};
+    return {for (final entry in map.entries) entry.key: entry.value as bool};
+  }
 
   Future<List<Message>> search({
     String? content,

@@ -55,6 +55,20 @@ Future<void> initLoad(WidgetRef ref, String userId,
     debugPrint('initLoad inbox err: $e');
   }
 
+  try {
+    final rt = await ref.read(messageApiProvider).getReadTimes();
+    ref.read(readTimeProvider.notifier).set(rt);
+  } catch (e) {
+    debugPrint('initLoad readtime err: $e');
+  }
+
+  try {
+    final flags = await ref.read(messageApiProvider).getNewFlags();
+    ref.read(hasNewMessageProvider.notifier).set(flags);
+  } catch (e) {
+    debugPrint('initLoad hasNewMessage err: $e');
+  }
+
   ref.read(appStatusProvider.notifier).setLoggedIn(true);
 
   if (initWsToo) {
@@ -79,8 +93,20 @@ void _handleWsEvent(WidgetRef ref, WsEvent event) {
         try {
           final msg = Message.fromJson(data);
           ref.read(historyProvider.notifier).addNew(msg);
+          ref
+              .read(hasNewMessageProvider.notifier)
+              .mark(msg.channelId, true);
         } catch (e) {
           debugPrint('SendMessage decode err: $e');
+        }
+      }
+      break;
+    case 'message::ReadTimeUpdated':
+      if (data is Map<String, dynamic>) {
+        final channelId = data['channelId'] as String?;
+        final readTime = data['readTime'] as String?;
+        if (channelId != null && readTime != null) {
+          ref.read(readTimeProvider.notifier).update(channelId, readTime);
         }
       }
       break;

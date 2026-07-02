@@ -307,3 +307,27 @@ class OnlineUsersNotifier extends StateNotifier<Set<String>> {
 final onlineUsersProvider =
     StateNotifierProvider<OnlineUsersNotifier, Set<String>>(
         (ref) => OnlineUsersNotifier());
+
+class ReadTimeNotifier extends StateNotifier<Map<String, String>> {
+  ReadTimeNotifier() : super(const {});
+  void set(Map<String, String> v) => state = v;
+  void update(String channelId, String readTime) {
+    state = {...state, channelId: readTime};
+  }
+}
+
+final readTimeProvider =
+    StateNotifierProvider<ReadTimeNotifier, Map<String, String>>(
+        (ref) => ReadTimeNotifier());
+
+class HasNewMessageNotifier extends StateNotifier<Map<String, bool>> {
+  HasNewMessageNotifier() : super(const {});
+  void set(Map<String, bool> v) => state = v;
+  void mark(String channelId, bool value) {
+    state = {...state, channelId: value};
+  }
+}
+
+final hasNewMessageProvider =
+    StateNotifierProvider<HasNewMessageNotifier, Map<String, bool>>(
+        (ref) => HasNewMessageNotifier());

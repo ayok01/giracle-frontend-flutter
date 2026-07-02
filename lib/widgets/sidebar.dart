@@ -107,16 +107,42 @@ class GiracleSidebar extends ConsumerWidget {
               ),
             ),
             Expanded(
-              child: ListView.builder(
-                itemCount: joined.length,
-                itemBuilder: (_, i) {
-                  final c = joined[i];
-                  return ListTile(
-                    leading: const Icon(Icons.tag),
-                    title: Text(c.name),
-                    onTap: () {
-                      Navigator.of(context).pop();
-                      context.go('/app/channel/${c.id}');
+              child: Consumer(
+                builder: (_, ref, __) {
+                  final hasNew = ref.watch(hasNewMessageProvider);
+                  return ListView.builder(
+                    itemCount: joined.length,
+                    itemBuilder: (_, i) {
+                      final c = joined[i];
+                      final unread = hasNew[c.id] == true;
+                      return ListTile(
+                        leading: Stack(
+                          clipBehavior: Clip.none,
+                          children: [
+                            const Icon(Icons.tag),
+                            if (unread)
+                              const Positioned(
+                                right: -2,
+                                top: -2,
+                                child: CircleAvatar(
+                                  radius: 4,
+                                  backgroundColor: Colors.red,
+                                ),
+                              ),
+                          ],
+                        ),
+                        title: Text(
+                          c.name,
+                          style: TextStyle(
+                            fontWeight:
+                                unread ? FontWeight.bold : FontWeight.normal,
+                          ),
+                        ),
+                        onTap: () {
+                          Navigator.of(context).pop();
+                          context.go('/app/channel/${c.id}');
+                        },
+                      );
                     },
                   );
                 },
