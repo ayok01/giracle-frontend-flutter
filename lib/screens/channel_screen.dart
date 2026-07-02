@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../api/api_client.dart';
 import '../models/message.dart';
 import '../stores/providers.dart';
+import '../widgets/user_profile_sheet.dart';
 
 class ChannelScreen extends ConsumerStatefulWidget {
   const ChannelScreen({super.key, required this.channelId});
@@ -393,6 +394,8 @@ class _ChannelScreenState extends ConsumerState<ChannelScreen> {
                         onLongPress: () => _openActions(m),
                         onToggleReaction: (code) => _toggleReaction(m, code),
                         onAddReaction: () => _openReactionPicker(m),
+                        onSenderTap: () =>
+                            showUserProfileSheet(context, ref, m.userId),
                       );
                     },
                   ),
@@ -551,6 +554,7 @@ class MessageBubble extends StatelessWidget {
     required this.onLongPress,
     required this.onToggleReaction,
     required this.onAddReaction,
+    required this.onSenderTap,
     this.replyTarget,
     this.replyTargetSenderName,
   });
@@ -563,6 +567,7 @@ class MessageBubble extends StatelessWidget {
   final VoidCallback onLongPress;
   final ValueChanged<String> onToggleReaction;
   final VoidCallback onAddReaction;
+  final VoidCallback onSenderTap;
 
   @override
   Widget build(BuildContext context) {
@@ -612,8 +617,11 @@ class MessageBubble extends StatelessWidget {
               ),
             Row(
               children: [
-                Text(senderName,
-                    style: const TextStyle(fontWeight: FontWeight.bold)),
+                InkWell(
+                  onTap: onSenderTap,
+                  child: Text(senderName,
+                      style: const TextStyle(fontWeight: FontWeight.bold)),
+                ),
                 const SizedBox(width: 8),
                 Text(ts, style: Theme.of(context).textTheme.bodySmall),
                 if (message.isEdited) ...[

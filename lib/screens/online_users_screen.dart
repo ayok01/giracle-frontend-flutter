@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../api/api_client.dart';
 import '../stores/providers.dart';
+import '../widgets/user_profile_sheet.dart';
 
 class OnlineUsersScreen extends ConsumerStatefulWidget {
   const OnlineUsersScreen({super.key});
@@ -112,6 +113,7 @@ class _OnlineUsersScreenState extends ConsumerState<OnlineUsersScreen> {
                         Text('オンライン'),
                       ],
                     ),
+                    onTap: () => showUserProfileSheet(context, ref, id),
                   );
                 },
               ),

@@ -41,4 +41,23 @@ class UserApi {
         .map((e) => e as String)
         .toList();
   }
+
+  Future<void> updateProfile({String? name, String? selfIntroduction}) =>
+      _api.postJson('/user/profile-update', body: {
+        if (name != null) 'name': name,
+        if (selfIntroduction != null) 'selfIntroduction': selfIntroduction,
+      });
+
+  Future<void> changePassword(String current, String newPassword) =>
+      _api.postJson('/user/change-password', body: {
+        'currentPassword': current,
+        'newPassword': newPassword,
+      });
+
+  Future<List<User>> search(String q) async {
+    final json = await _api.getJson('/user/search', query: {'q': q});
+    return (json['data'] as List<dynamic>? ?? [])
+        .map((e) => User.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
 }

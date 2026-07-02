@@ -28,6 +28,8 @@ class ConfigScreen extends ConsumerWidget {
             leading: const Icon(Icons.person),
             title: Text(me.name),
             subtitle: Text(me.id.isEmpty ? '未ログイン' : me.id),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.go('/app/config/profile'),
           ),
           const Divider(),
           ListTile(
