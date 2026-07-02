@@ -36,6 +36,10 @@ class GiracleSidebar extends ConsumerWidget {
                       : '再接続中...'),
                 ],
               ),
+              onTap: () {
+                Navigator.of(context).pop();
+                context.go('/app/online-user');
+              },
             ),
             const Divider(),
             ListTile(

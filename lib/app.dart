@@ -8,6 +8,7 @@ import 'screens/config_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/inbox_screen.dart';
 import 'screens/login_screen.dart';
+import 'screens/online_users_screen.dart';
 import 'screens/splash_screen.dart';
 
 class GiracleApp extends ConsumerStatefulWidget {
@@ -43,6 +44,10 @@ class _GiracleAppState extends ConsumerState<GiracleApp> {
             ),
             GoRoute(path: 'config', builder: (_, __) => const ConfigScreen()),
             GoRoute(path: 'inbox', builder: (_, __) => const InboxScreen()),
+            GoRoute(
+              path: 'online-user',
+              builder: (_, __) => const OnlineUsersScreen(),
+            ),
           ],
         ),
       ],
