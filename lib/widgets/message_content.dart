@@ -54,22 +54,28 @@ class _FileTile extends StatelessWidget {
     if (file.type.startsWith('image')) {
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 4),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(8),
-          child: AuthedNetworkImage(
-            url: url,
-            fit: BoxFit.cover,
-            placeholder: (ctx) => Container(
-              height: 120,
-              color: Theme.of(ctx).colorScheme.surfaceContainerHighest,
-              alignment: Alignment.center,
-              child: const SizedBox(
-                height: 20,
-                width: 20,
-                child: CircularProgressIndicator(strokeWidth: 2),
+        child: GestureDetector(
+          onTap: () => _showImageModal(context, url),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 256),
+              child: AuthedNetworkImage(
+                url: url,
+                fit: BoxFit.contain,
+                placeholder: (ctx) => Container(
+                  height: 120,
+                  color: Theme.of(ctx).colorScheme.surfaceContainerHighest,
+                  alignment: Alignment.center,
+                  child: const SizedBox(
+                    height: 20,
+                    width: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                ),
+                errorWidget: (_, __) => const Icon(Icons.broken_image),
               ),
             ),
-            errorWidget: (_, __) => const Icon(Icons.broken_image),
           ),
         ),
       );
@@ -87,6 +93,45 @@ class _FileTile extends StatelessWidget {
             onPressed: _open,
           ),
           onTap: _open,
+        ),
+      ),
+    );
+  }
+}
+
+void _showImageModal(BuildContext context, String url) {
+  Navigator.of(context).push(
+    PageRouteBuilder<void>(
+      opaque: false,
+      barrierColor: Colors.black87,
+      pageBuilder: (_, __, ___) => _ImageViewer(url: url),
+    ),
+  );
+}
+
+class _ImageViewer extends StatelessWidget {
+  const _ImageViewer({required this.url});
+  final String url;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        iconTheme: const IconThemeData(color: Colors.white),
+      ),
+      body: GestureDetector(
+        onTap: () => Navigator.of(context).pop(),
+        child: Center(
+          child: InteractiveViewer(
+            child: AuthedNetworkImage(
+              url: url,
+              fit: BoxFit.contain,
+              errorWidget: (_, __) =>
+                  const Icon(Icons.broken_image, color: Colors.white),
+            ),
+          ),
         ),
       ),
     );
@@ -113,16 +158,19 @@ class MessageUrlPreviews extends StatelessWidget {
       children: previews.map((p) {
         return Padding(
           padding: const EdgeInsets.symmetric(vertical: 4),
-          child: Card(
-            clipBehavior: Clip.antiAlias,
-            child: InkWell(
-              onTap: () => _open(p.url),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 384),
+            child: Card(
+              clipBehavior: Clip.antiAlias,
+              child: InkWell(
+                onTap: () => _open(p.url),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                   if (p.imageLink != null && p.imageLink!.isNotEmpty)
-                    AspectRatio(
-                      aspectRatio: 16 / 9,
+                    SizedBox(
+                      height: 208,
+                      width: double.infinity,
                       child: CachedNetworkImage(
                         imageUrl: p.imageLink!,
                         fit: BoxFit.cover,
@@ -172,7 +220,8 @@ class MessageUrlPreviews extends StatelessWidget {
                       ],
                     ),
                   ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
