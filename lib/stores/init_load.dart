@@ -1,8 +1,10 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../models/channel.dart';
 import '../models/message.dart';
 import '../models/role.dart';
+import '../models/user.dart';
 import '../ws/ws_controller.dart';
 import 'providers.dart';
 
@@ -213,7 +215,87 @@ void _handleWsEvent(WidgetRef ref, WsEvent event) {
       }
       break;
     case 'channel::UpdateChannel':
-      // Left for future implementation.
+      if (data is Map<String, dynamic>) {
+        try {
+          final c = Channel.fromJson(data);
+          ref.read(channelInfoProvider.notifier).upsert(c);
+          ref.read(channelListProvider.notifier).upsert(c);
+        } catch (e) {
+          debugPrint('UpdateChannel decode err: $e');
+        }
+      }
+      break;
+    case 'channel::Deleted':
+      if (data is Map<String, dynamic>) {
+        final id = data['channelId'] as String?;
+        if (id != null) {
+          ref.read(channelListProvider.notifier).remove(id);
+          ref.read(channelInfoProvider.notifier).remove(id);
+          ref.read(historyProvider.notifier).removeChannel(id);
+          ref.read(myUserProvider.notifier).removeChannel(id);
+        }
+      }
+      break;
+    case 'channel::Join':
+      if (data is Map<String, dynamic>) {
+        final id = data['channelId'] as String?;
+        if (id != null) ref.read(myUserProvider.notifier).addChannel(id);
+      }
+      break;
+    case 'channel::Left':
+      if (data is Map<String, dynamic>) {
+        final id = data['channelId'] as String?;
+        if (id != null) {
+          ref.read(myUserProvider.notifier).removeChannel(id);
+          ref.read(historyProvider.notifier).removeChannel(id);
+        }
+      }
+      break;
+    case 'role::Updated':
+      if (data is Map<String, dynamic>) {
+        try {
+          final r = Role.fromJson(data);
+          ref.read(roleInfoProvider.notifier).upsert(r);
+        } catch (e) {
+          debugPrint('role::Updated decode err: $e');
+        }
+      }
+      break;
+    case 'role::Linked':
+      if (data is Map<String, dynamic>) {
+        final roleId = data['roleId'] as String?;
+        final userId = data['userId'] as String?;
+        if (roleId != null && userId != null) {
+          if (userId == ref.read(myUserProvider).id) {
+            ref.read(myUserProvider.notifier).addRole(roleId);
+          }
+        }
+      }
+      break;
+    case 'role::Unlinked':
+    case 'role::Deleted':
+      if (data is Map<String, dynamic>) {
+        final roleId = data['roleId'] as String?;
+        final userId = data['userId'] as String?;
+        if (roleId != null) {
+          if (userId == null || userId == ref.read(myUserProvider).id) {
+            ref.read(myUserProvider.notifier).removeRole(roleId);
+          }
+        }
+      }
+      break;
+    case 'user::ProfileUpdate':
+      if (data is Map<String, dynamic>) {
+        try {
+          final u = User.fromJson(data);
+          if (u.id == ref.read(myUserProvider).id) {
+            ref.read(myUserProvider.notifier).set(u);
+          }
+          ref.read(userCacheProvider.notifier).upsert(u);
+        } catch (e) {
+          debugPrint('user::ProfileUpdate decode err: $e');
+        }
+      }
       break;
     default:
       break;

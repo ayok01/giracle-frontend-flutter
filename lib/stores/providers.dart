@@ -60,6 +60,33 @@ class MyUserNotifier extends StateNotifier<User> {
   void set(User u) => state = u;
   void reset() => state = User.empty();
 
+  void addChannel(String channelId) {
+    if (state.channelJoin.any((c) => c.channelId == channelId)) return;
+    state = state.copyWith(
+      channelJoin: [...state.channelJoin, ChannelJoinRef(channelId: channelId)],
+    );
+  }
+
+  void removeChannel(String channelId) {
+    state = state.copyWith(
+      channelJoin:
+          state.channelJoin.where((c) => c.channelId != channelId).toList(),
+    );
+  }
+
+  void addRole(String roleId) {
+    if (state.roleLink.any((r) => r.roleId == roleId)) return;
+    state = state.copyWith(
+      roleLink: [...state.roleLink, RoleLinkRef(roleId: roleId)],
+    );
+  }
+
+  void removeRole(String roleId) {
+    state = state.copyWith(
+      roleLink: state.roleLink.where((r) => r.roleId != roleId).toList(),
+    );
+  }
+
   bool hasRolePower(String term, Map<String, Role> roles) {
     for (final link in state.roleLink) {
       if (link.roleId == 'HOST') return true;
@@ -124,6 +151,10 @@ final channelListProvider =
 class ChannelInfoNotifier extends StateNotifier<Map<String, Channel>> {
   ChannelInfoNotifier() : super(const {});
   void upsert(Channel c) => state = {...state, c.id: c};
+  void remove(String id) {
+    final next = {...state}..remove(id);
+    state = next;
+  }
 }
 
 final channelInfoProvider =
@@ -172,6 +203,11 @@ class HistoryNotifier extends StateNotifier<Map<String, HistoryEntry>> {
 
   void setHistory(String channelId, HistoryEntry entry) {
     state = {...state, channelId: entry};
+  }
+
+  void removeChannel(String channelId) {
+    final next = {...state}..remove(channelId);
+    state = next;
   }
 
   void prepend(String channelId, List<Message> older) {
