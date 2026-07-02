@@ -55,4 +55,30 @@ class ChannelApi {
 
   Future<void> leave(String channelId) =>
       _api.postJson('/channel/leave', body: {'channelId': channelId});
+
+  Future<String> create(String name, String description) async {
+    final json = await _api.putJson('/channel/create', body: {
+      'channelName': name,
+      'description': description,
+    });
+    return (json['data'] as Map<String, dynamic>)['channelId'] as String;
+  }
+
+  Future<void> update({
+    required String channelId,
+    String? name,
+    String? description,
+    bool? isArchived,
+    List<String>? viewableRole,
+  }) =>
+      _api.postJson('/channel/update', body: {
+        'channelId': channelId,
+        if (name != null) 'name': name,
+        if (description != null) 'description': description,
+        if (isArchived != null) 'isArchived': isArchived,
+        if (viewableRole != null) 'viewableRole': viewableRole,
+      });
+
+  Future<void> delete(String channelId) =>
+      _api.deleteJson('/channel/delete', body: {'channelId': channelId});
 }

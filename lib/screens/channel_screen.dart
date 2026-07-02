@@ -149,6 +149,126 @@ class _ChannelScreenState extends ConsumerState<ChannelScreen> {
     }
   }
 
+  Future<void> _renameChannel() async {
+    final current = ref.read(channelInfoProvider)[widget.channelId];
+    if (current == null) return;
+    final nameCtl = TextEditingController(text: current.name);
+    final descCtl = TextEditingController(text: current.description);
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('チャンネルを編集'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: nameCtl,
+              decoration: const InputDecoration(labelText: 'チャンネル名'),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: descCtl,
+              decoration: const InputDecoration(labelText: '説明'),
+              maxLines: 2,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('キャンセル'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('保存'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      await ref.read(channelApiProvider).update(
+            channelId: widget.channelId,
+            name: nameCtl.text.trim(),
+            description: descCtl.text.trim(),
+          );
+      final info = await ref.read(channelApiProvider).info(widget.channelId);
+      ref.read(channelInfoProvider.notifier).upsert(info);
+    } on ApiException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(e.message)));
+      }
+    }
+  }
+
+  Future<void> _leaveChannel() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('チャンネルから抜ける'),
+        content: const Text('このチャンネルの購読を解除しますか?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('キャンセル'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('抜ける'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      await ref.read(channelApiProvider).leave(widget.channelId);
+      final myId = ref.read(myUserProvider).id;
+      if (myId.isNotEmpty) {
+        final me = await ref.read(userApiProvider).info(myId);
+        ref.read(myUserProvider.notifier).set(me);
+      }
+      if (mounted) context.go('/app');
+    } on ApiException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(e.message)));
+      }
+    }
+  }
+
+  Future<void> _deleteChannel() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('チャンネルを削除'),
+        content:
+            const Text('この操作は取り消せません。チャンネルとメッセージが失われます。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('キャンセル'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('削除する'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      await ref.read(channelApiProvider).delete(widget.channelId);
+      ref.read(channelListProvider.notifier).remove(widget.channelId);
+      if (mounted) context.go('/app');
+    } on ApiException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(e.message)));
+      }
+    }
+  }
+
   Future<void> _joinChannel() async {
     try {
       await ref.read(channelApiProvider).join(widget.channelId);
@@ -348,6 +468,34 @@ class _ChannelScreenState extends ConsumerState<ChannelScreen> {
           onPressed: () => context.canPop() ? context.pop() : context.go('/app'),
         ),
         title: Text(channel?.name ?? 'Loading...'),
+        actions: [
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert),
+            onSelected: (v) {
+              switch (v) {
+                case 'rename':
+                  _renameChannel();
+                  break;
+                case 'leave':
+                  _leaveChannel();
+                  break;
+                case 'delete':
+                  _deleteChannel();
+                  break;
+              }
+            },
+            itemBuilder: (_) => [
+              if (joined)
+                const PopupMenuItem(
+                    value: 'rename', child: Text('チャンネル名を変更')),
+              if (joined)
+                const PopupMenuItem(
+                    value: 'leave', child: Text('チャンネルから抜ける')),
+              const PopupMenuItem(
+                  value: 'delete', child: Text('チャンネルを削除')),
+            ],
+          ),
+        ],
       ),
       body: Column(
         children: [
