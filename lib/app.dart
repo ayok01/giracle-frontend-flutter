@@ -10,6 +10,7 @@ import 'screens/inbox_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/online_users_screen.dart';
 import 'screens/profile_edit_screen.dart';
+import 'screens/search_screen.dart';
 import 'screens/splash_screen.dart';
 
 class GiracleApp extends ConsumerStatefulWidget {
@@ -57,6 +58,10 @@ class _GiracleAppState extends ConsumerState<GiracleApp> {
             GoRoute(
               path: 'online-user',
               builder: (_, __) => const OnlineUsersScreen(),
+            ),
+            GoRoute(
+              path: 'search',
+              builder: (_, __) => const SearchScreen(),
             ),
           ],
         ),

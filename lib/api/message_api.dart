@@ -55,4 +55,28 @@ class MessageApi {
   Future<void> updateReadTime(String channelId, String readTime) =>
       _api.postJson('/message/update-readtime',
           body: {'channelId': channelId, 'readTime': readTime});
+
+  Future<List<Message>> search({
+    String? content,
+    String? channelId,
+    String? userId,
+    bool? hasUrlPreview,
+    bool? hasFileAttachment,
+    int? loadIndex,
+    String? sort,
+  }) async {
+    final json = await _api.getJson('/message/search', query: {
+      if (content != null && content.isNotEmpty) 'content': content,
+      if (channelId != null) 'channelId': channelId,
+      if (userId != null) 'userId': userId,
+      if (hasUrlPreview != null) 'hasUrlPreview': hasUrlPreview.toString(),
+      if (hasFileAttachment != null)
+        'hasFileAttachment': hasFileAttachment.toString(),
+      if (loadIndex != null) 'loadIndex': loadIndex.toString(),
+      if (sort != null) 'sort': sort,
+    });
+    return (json['data'] as List<dynamic>? ?? [])
+        .map((e) => Message.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
 }

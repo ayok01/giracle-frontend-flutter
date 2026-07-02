@@ -90,6 +90,14 @@ class GiracleSidebar extends ConsumerWidget {
                 context.go('/app/channel-browser');
               },
             ),
+            ListTile(
+              leading: const Icon(Icons.search),
+              title: const Text('検索'),
+              onTap: () {
+                Navigator.of(context).pop();
+                context.go('/app/search');
+              },
+            ),
             const Divider(),
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
