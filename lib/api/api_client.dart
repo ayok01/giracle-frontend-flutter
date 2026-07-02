@@ -21,8 +21,9 @@ class ApiClient {
 
   static Future<ApiClient> create() async {
     final prefs = await SharedPreferences.getInstance();
-    final baseUrl =
+    final stored =
         prefs.getString(Env.serverUrlPrefKey) ?? Env.defaultServerUrl;
+    final baseUrl = normalizeBaseUrl(stored);
 
     final docs = await getApplicationDocumentsDirectory();
     final cookieDir = Directory('${docs.path}/.cookies');
@@ -44,10 +45,29 @@ class ApiClient {
     return ApiClient._(dio, cookieJar, prefs, baseUrl);
   }
 
+  /// Giracle backend expects requests under `/api/*` when reached through the
+  /// production reverse proxy (mirroring the Solid dev-server's Vite proxy).
+  /// If the user just enters `https://host`, append `/api` for them.
+  static String normalizeBaseUrl(String raw) {
+    var s = raw.trim();
+    if (s.isEmpty) return s;
+    while (s.endsWith('/')) {
+      s = s.substring(0, s.length - 1);
+    }
+    final uri = Uri.tryParse(s);
+    if (uri == null) return s;
+    final path = uri.path;
+    if (path.isEmpty || path == '/' || !path.contains('/api')) {
+      return '$s/api';
+    }
+    return s;
+  }
+
   Future<void> setBaseUrl(String url) async {
-    _baseUrl = url;
-    dio.options.baseUrl = url;
-    await _prefs.setString(Env.serverUrlPrefKey, url);
+    final normalized = normalizeBaseUrl(url);
+    _baseUrl = normalized;
+    dio.options.baseUrl = normalized;
+    await _prefs.setString(Env.serverUrlPrefKey, normalized);
   }
 
   Future<void> clearCookies() => _cookieJar.deleteAll();

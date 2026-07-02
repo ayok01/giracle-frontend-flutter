@@ -14,7 +14,13 @@ class ServerApi {
 
   Future<ServerConfigResult> config() async {
     final json = await _api.getJson('/server/config');
-    final data = Map<String, dynamic>.from(json['data'] as Map);
+    final raw = json['data'];
+    if (raw is! Map) {
+      throw ApiException(
+        'サーバー応答が不正です (data missing)。URL に /api を含めているか確認してください',
+      );
+    }
+    final data = Map<String, dynamic>.from(raw);
     final isFirstUser = data['isFirstUser'] as bool? ?? false;
     data.remove('isFirstUser');
     return ServerConfigResult(

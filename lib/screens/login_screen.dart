@@ -40,9 +40,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
 
   Future<void> _fetchServer() async {
     final api = ref.read(apiClientProvider);
-    if (_serverCtl.text.trim().isNotEmpty &&
-        _serverCtl.text.trim() != api.baseUrl) {
-      await api.setBaseUrl(_serverCtl.text.trim());
+    final entered = _serverCtl.text.trim();
+    if (entered.isNotEmpty) {
+      await api.setBaseUrl(entered);
+      // Reflect the normalized value (may have appended /api) back to the field.
+      _serverCtl.text = api.baseUrl;
     }
     setState(() {
       _loadingServer = true;
@@ -84,7 +86,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                     controller: _serverCtl,
                     decoration: InputDecoration(
                       labelText: 'サーバー URL',
-                      hintText: 'http://localhost:3000',
+                      hintText: 'https://chat.example.com (自動で /api を付与)',
                       suffixIcon: _loadingServer
                           ? const Padding(
                               padding: EdgeInsets.all(12),
