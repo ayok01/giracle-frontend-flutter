@@ -1,0 +1,24 @@
+import '../models/server.dart';
+import 'api_client.dart';
+
+class ServerConfigResult {
+  final ServerInfo info;
+  final bool isFirstUser;
+  const ServerConfigResult({required this.info, required this.isFirstUser});
+}
+
+class ServerApi {
+  ServerApi(this._api);
+  final ApiClient _api;
+
+  Future<ServerConfigResult> config() async {
+    final json = await _api.getJson('/server/config');
+    final data = Map<String, dynamic>.from(json['data'] as Map);
+    final isFirstUser = data['isFirstUser'] as bool? ?? false;
+    data.remove('isFirstUser');
+    return ServerConfigResult(
+      info: ServerInfo.fromJson(data),
+      isFirstUser: isFirstUser,
+    );
+  }
+}
