@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../api/api_client.dart';
 import '../models/message.dart';
 import '../stores/providers.dart';
+import '../widgets/message_content.dart';
 import '../widgets/user_profile_sheet.dart';
 
 class ChannelScreen extends ConsumerStatefulWidget {
@@ -385,6 +386,7 @@ class _ChannelScreenState extends ConsumerState<ChannelScreen> {
                       return MessageBubble(
                         message: m,
                         senderName: userCache[m.userId]?.name ?? m.userId,
+                        baseUrl: ref.read(apiClientProvider).baseUrl,
                         replyTarget: replyTarget,
                         replyTargetSenderName: replyTarget == null
                             ? null
@@ -550,6 +552,7 @@ class MessageBubble extends StatelessWidget {
     super.key,
     required this.message,
     required this.senderName,
+    required this.baseUrl,
     required this.onFetchUser,
     required this.onLongPress,
     required this.onToggleReaction,
@@ -561,6 +564,7 @@ class MessageBubble extends StatelessWidget {
 
   final Message message;
   final String senderName;
+  final String baseUrl;
   final Message? replyTarget;
   final String? replyTargetSenderName;
   final VoidCallback onFetchUser;
@@ -633,6 +637,10 @@ class MessageBubble extends StatelessWidget {
             ),
             const SizedBox(height: 2),
             SelectableText(message.content),
+            if (message.files.isNotEmpty)
+              MessageAttachments(files: message.files, baseUrl: baseUrl),
+            if (message.urlPreviews.isNotEmpty)
+              MessageUrlPreviews(previews: message.urlPreviews),
             Padding(
               padding: const EdgeInsets.only(top: 4),
               child: Wrap(
