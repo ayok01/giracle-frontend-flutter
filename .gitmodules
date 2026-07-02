@@ -1,0 +1,3 @@
+[submodule "reference/giracle-frontend-solid"]
+	path = reference/giracle-frontend-solid
+	url = https://github.com/NfoAlex/giracle-frontend-solid
