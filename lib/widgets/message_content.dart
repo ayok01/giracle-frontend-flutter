@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../models/message.dart';
+import 'authed_image.dart';
 
 class MessageAttachments extends StatelessWidget {
   const MessageAttachments({
@@ -55,13 +56,12 @@ class _FileTile extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 4),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(8),
-          child: CachedNetworkImage(
-            imageUrl: url,
+          child: AuthedNetworkImage(
+            url: url,
             fit: BoxFit.cover,
-            errorWidget: (_, __, ___) => const Icon(Icons.broken_image),
-            placeholder: (_, __) => Container(
+            placeholder: (ctx) => Container(
               height: 120,
-              color: Theme.of(context).colorScheme.surfaceContainerHighest,
+              color: Theme.of(ctx).colorScheme.surfaceContainerHighest,
               alignment: Alignment.center,
               child: const SizedBox(
                 height: 20,
@@ -69,6 +69,7 @@ class _FileTile extends StatelessWidget {
                 child: CircularProgressIndicator(strokeWidth: 2),
               ),
             ),
+            errorWidget: (_, __) => const Icon(Icons.broken_image),
           ),
         ),
       );

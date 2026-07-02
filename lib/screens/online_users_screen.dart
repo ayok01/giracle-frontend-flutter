@@ -1,10 +1,10 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../api/api_client.dart';
 import '../stores/providers.dart';
+import '../widgets/authed_image.dart';
 import '../widgets/user_profile_sheet.dart';
 
 class OnlineUsersScreen extends ConsumerStatefulWidget {
@@ -98,12 +98,14 @@ class _OnlineUsersScreenState extends ConsumerState<OnlineUsersScreen> {
                   final user = userCache[id];
                   _prefetch(id);
                   return ListTile(
-                    leading: CircleAvatar(
-                      backgroundImage:
-                          CachedNetworkImageProvider('$base/user/icon/$id'),
-                      child: user == null
-                          ? Text(id.isNotEmpty ? id[0].toUpperCase() : '?')
-                          : null,
+                    leading: AuthedAvatar(
+                      url: '$base/user/icon/$id',
+                      radius: 20,
+                      fallback: Text(
+                        (user?.name.isNotEmpty ?? false)
+                            ? user!.name[0].toUpperCase()
+                            : (id.isNotEmpty ? id[0].toUpperCase() : '?'),
+                      ),
                     ),
                     title: Text(user?.name ?? id),
                     subtitle: Row(

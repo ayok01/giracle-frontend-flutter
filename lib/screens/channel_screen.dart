@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../api/api_client.dart';
 import '../models/message.dart';
 import '../stores/providers.dart';
+import '../widgets/authed_image.dart';
 import '../widgets/message_content.dart';
 import '../widgets/user_profile_sheet.dart';
 
@@ -833,11 +834,15 @@ class MessageBubble extends StatelessWidget {
                           ? Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Image.network(
-                                  '$baseUrl/server/custom-emoji/${r.emojiCode}',
+                                SizedBox(
                                   height: 18,
-                                  errorBuilder: (_, __, ___) =>
-                                      Text(':${r.emojiCode}:'),
+                                  child: AuthedNetworkImage(
+                                    url:
+                                        '$baseUrl/server/custom-emoji/${r.emojiCode}',
+                                    height: 18,
+                                    errorWidget: (_, __) =>
+                                        Text(':${r.emojiCode}:'),
+                                  ),
                                 ),
                                 const SizedBox(width: 4),
                                 Text('${r.count}'),

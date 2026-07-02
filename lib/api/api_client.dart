@@ -72,6 +72,19 @@ class ApiClient {
 
   Future<void> clearCookies() => _cookieJar.deleteAll();
 
+  /// Build a `Cookie` header value for the given absolute URL — needed for
+  /// image widgets (which don't share Dio's cookie jar).
+  Future<String> cookieHeader(String url) async {
+    final uri = Uri.tryParse(url);
+    if (uri == null) return '';
+    final cookies = await _cookieJar.loadForRequest(uri);
+    return cookies.map((c) => '${c.name}=${c.value}').join('; ');
+  }
+
+  /// Synchronous accessor to the cookie jar so callers can wrap network
+  /// image widgets that require a header map.
+  CookieJar get cookieJar => _cookieJar;
+
   Future<Map<String, dynamic>> _handle(
     Future<Response<dynamic>> Function() send,
   ) async {

@@ -1,9 +1,9 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../api/api_client.dart';
 import '../stores/providers.dart';
+import 'authed_image.dart';
 
 Future<void> showUserProfileSheet(
     BuildContext context, WidgetRef ref, String userId) async {
@@ -39,10 +39,13 @@ Future<void> showUserProfileSheet(
             children: [
               Row(
                 children: [
-                  CircleAvatar(
+                  AuthedAvatar(
+                    url: '$base/user/icon/${user!.id}',
                     radius: 28,
-                    backgroundImage: CachedNetworkImageProvider(
-                      '$base/user/icon/${user!.id}',
+                    fallback: Text(
+                      user.name.isNotEmpty
+                          ? user.name[0].toUpperCase()
+                          : '?',
                     ),
                   ),
                   const SizedBox(width: 12),
