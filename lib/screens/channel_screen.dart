@@ -550,10 +550,12 @@ class _ChannelScreenState extends ConsumerState<ChannelScreen> {
                       final replyTarget = m.replyingMessageId == null
                           ? null
                           : _findMessage(m.replyingMessageId!);
+                      final emojiMap = ref.watch(customEmojiProvider);
                       return MessageBubble(
                         message: m,
                         senderName: userCache[m.userId]?.name ?? m.userId,
                         baseUrl: ref.read(apiClientProvider).baseUrl,
+                        customEmojiCodes: emojiMap.keys.toSet(),
                         replyTarget: replyTarget,
                         replyTargetSenderName: replyTarget == null
                             ? null
@@ -720,6 +722,7 @@ class MessageBubble extends StatelessWidget {
     required this.message,
     required this.senderName,
     required this.baseUrl,
+    required this.customEmojiCodes,
     required this.onFetchUser,
     required this.onLongPress,
     required this.onToggleReaction,
@@ -732,6 +735,7 @@ class MessageBubble extends StatelessWidget {
   final Message message;
   final String senderName;
   final String baseUrl;
+  final Set<String> customEmojiCodes;
   final Message? replyTarget;
   final String? replyTargetSenderName;
   final VoidCallback onFetchUser;
@@ -816,6 +820,7 @@ class MessageBubble extends StatelessWidget {
                 children: [
                   ...message.reactionSummary.map((r) {
                     final theme = Theme.of(context);
+                    final isCustom = customEmojiCodes.contains(r.emojiCode);
                     return InputChip(
                       padding: EdgeInsets.zero,
                       visualDensity: VisualDensity.compact,
@@ -824,7 +829,21 @@ class MessageBubble extends StatelessWidget {
                       backgroundColor: r.includingYou
                           ? theme.colorScheme.primaryContainer
                           : null,
-                      label: Text('${r.emojiCode} ${r.count}'),
+                      label: isCustom
+                          ? Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Image.network(
+                                  '$baseUrl/server/custom-emoji/${r.emojiCode}',
+                                  height: 18,
+                                  errorBuilder: (_, __, ___) =>
+                                      Text(':${r.emojiCode}:'),
+                                ),
+                                const SizedBox(width: 4),
+                                Text('${r.count}'),
+                              ],
+                            )
+                          : Text('${r.emojiCode} ${r.count}'),
                       onSelected: (_) => onToggleReaction(r.emojiCode),
                     );
                   }),

@@ -69,6 +69,13 @@ Future<void> initLoad(WidgetRef ref, String userId,
     debugPrint('initLoad hasNewMessage err: $e');
   }
 
+  try {
+    final emojis = await ref.read(serverApiProvider).customEmojis();
+    ref.read(customEmojiProvider.notifier).set(emojis);
+  } catch (e) {
+    debugPrint('initLoad customEmoji err: $e');
+  }
+
   ref.read(appStatusProvider.notifier).setLoggedIn(true);
 
   if (initWsToo) {
@@ -99,6 +106,23 @@ void _handleWsEvent(WidgetRef ref, WsEvent event) {
         } catch (e) {
           debugPrint('SendMessage decode err: $e');
         }
+      }
+      break;
+    case 'server::CustomEmojiUploaded':
+      if (data is Map<String, dynamic>) {
+        try {
+          ref
+              .read(customEmojiProvider.notifier)
+              .upsert(CustomEmoji.fromJson(data));
+        } catch (e) {
+          debugPrint('CustomEmojiUploaded decode err: $e');
+        }
+      }
+      break;
+    case 'server::CustomEmojiDeleted':
+      if (data is Map<String, dynamic>) {
+        final code = data['code'] as String?;
+        if (code != null) ref.read(customEmojiProvider.notifier).remove(code);
       }
       break;
     case 'message::ReadTimeUpdated':

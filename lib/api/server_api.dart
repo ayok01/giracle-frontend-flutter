@@ -1,3 +1,4 @@
+import '../models/message.dart';
 import '../models/server.dart';
 import 'api_client.dart';
 
@@ -20,5 +21,12 @@ class ServerApi {
       info: ServerInfo.fromJson(data),
       isFirstUser: isFirstUser,
     );
+  }
+
+  Future<List<CustomEmoji>> customEmojis() async {
+    final json = await _api.getJson('/server/custom-emoji');
+    return (json['data'] as List<dynamic>? ?? [])
+        .map((e) => CustomEmoji.fromJson(e as Map<String, dynamic>))
+        .toList();
   }
 }

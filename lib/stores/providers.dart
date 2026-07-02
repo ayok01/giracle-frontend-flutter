@@ -331,3 +331,18 @@ class HasNewMessageNotifier extends StateNotifier<Map<String, bool>> {
 final hasNewMessageProvider =
     StateNotifierProvider<HasNewMessageNotifier, Map<String, bool>>(
         (ref) => HasNewMessageNotifier());
+
+class CustomEmojiNotifier extends StateNotifier<Map<String, CustomEmoji>> {
+  CustomEmojiNotifier() : super(const {});
+  void set(List<CustomEmoji> list) =>
+      state = {for (final e in list) e.code: e};
+  void upsert(CustomEmoji e) => state = {...state, e.code: e};
+  void remove(String code) {
+    final next = {...state}..remove(code);
+    state = next;
+  }
+}
+
+final customEmojiProvider =
+    StateNotifierProvider<CustomEmojiNotifier, Map<String, CustomEmoji>>(
+        (ref) => CustomEmojiNotifier());

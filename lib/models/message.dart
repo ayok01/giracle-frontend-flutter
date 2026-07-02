@@ -138,6 +138,24 @@ class Message {
   }
 }
 
+class CustomEmoji {
+  final String id;
+  final String code;
+  final String uploadedUserId;
+
+  const CustomEmoji({
+    required this.id,
+    required this.code,
+    required this.uploadedUserId,
+  });
+
+  factory CustomEmoji.fromJson(Map<String, dynamic> json) => CustomEmoji(
+        id: json['id'] as String,
+        code: json['code'] as String,
+        uploadedUserId: json['uploadedUserId'] as String? ?? '',
+      );
+}
+
 class InboxItem {
   final String type;
   final String userId;
