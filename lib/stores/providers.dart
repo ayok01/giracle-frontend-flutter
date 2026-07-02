@@ -205,6 +205,76 @@ class HistoryNotifier extends StateNotifier<Map<String, HistoryEntry>> {
           history: current.history.where((m) => m.id != messageId).toList()),
     };
   }
+
+  void updateMessage(Message updated) {
+    final current = state[updated.channelId];
+    if (current == null) return;
+    final replaced = current.history
+        .map((m) => m.id == updated.id ? updated : m)
+        .toList();
+    state = {...state, updated.channelId: current.copyWith(history: replaced)};
+  }
+
+  void applyReaction({
+    required String channelId,
+    required String messageId,
+    required String emojiCode,
+    required bool add,
+    required String actorUserId,
+    required String myUserId,
+  }) {
+    final current = state[channelId];
+    if (current == null) return;
+    final replaced = current.history.map((m) {
+      if (m.id != messageId) return m;
+      final list = [...m.reactionSummary];
+      final idx = list.indexWhere((r) => r.emojiCode == emojiCode);
+      if (add) {
+        if (idx < 0) {
+          list.add(ReactionSummary(
+            emojiCode: emojiCode,
+            count: 1,
+            includingYou: actorUserId == myUserId,
+          ));
+        } else {
+          final r = list[idx];
+          list[idx] = ReactionSummary(
+            emojiCode: emojiCode,
+            count: r.count + 1,
+            includingYou: r.includingYou || actorUserId == myUserId,
+          );
+        }
+      } else {
+        if (idx >= 0) {
+          final r = list[idx];
+          final newCount = r.count - 1;
+          if (newCount <= 0) {
+            list.removeAt(idx);
+          } else {
+            list[idx] = ReactionSummary(
+              emojiCode: emojiCode,
+              count: newCount,
+              includingYou: actorUserId == myUserId ? false : r.includingYou,
+            );
+          }
+        }
+      }
+      return Message(
+        id: m.id,
+        channelId: m.channelId,
+        userId: m.userId,
+        content: m.content,
+        isEdited: m.isEdited,
+        createdAt: m.createdAt,
+        isSystemMessage: m.isSystemMessage,
+        replyingMessageId: m.replyingMessageId,
+        urlPreviews: m.urlPreviews,
+        files: m.files,
+        reactionSummary: list,
+      );
+    }).toList();
+    state = {...state, channelId: current.copyWith(history: replaced)};
+  }
 }
 
 final historyProvider =

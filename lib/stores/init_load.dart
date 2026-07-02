@@ -88,6 +88,16 @@ void _handleWsEvent(WidgetRef ref, WsEvent event) {
         }
       }
       break;
+    case 'message::UpdateMessage':
+      if (data is Map<String, dynamic>) {
+        try {
+          final msg = Message.fromJson(data);
+          ref.read(historyProvider.notifier).updateMessage(msg);
+        } catch (e) {
+          debugPrint('UpdateMessage decode err: $e');
+        }
+      }
+      break;
     case 'user::Connected':
       if (data is Map<String, dynamic>) {
         final id = data['userId'] as String?;
