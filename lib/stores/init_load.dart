@@ -81,20 +81,33 @@ Future<void> initLoad(WidgetRef ref, String userId,
   ref.read(appStatusProvider.notifier).setLoggedIn(true);
 
   if (initWsToo) {
-    _wireWs(ref);
+    // Trigger the app-scoped wiring provider so its long-lived Ref (not the
+    // caller's WidgetRef) owns the WS stream subscriptions.
+    ref.read(wsWiringProvider);
     await ref.read(wsControllerProvider).connect();
   }
 }
 
-void _wireWs(WidgetRef ref) {
-  final ws = ref.read(wsControllerProvider);
-  ws.connection.listen((connected) {
+/// App-scoped wiring between the WS controller and the state providers.
+/// The `Ref` captured here lives as long as the `ProviderContainer` (i.e. the
+/// whole app), which is what we need — WebSocket events keep arriving long
+/// after the screen that triggered `initLoad` has been popped, so relying on
+/// a `WidgetRef` from that screen would silently no-op after the widget
+/// disposed.
+final wsWiringProvider = Provider<void>((ref) {
+  final ws = ref.watch(wsControllerProvider);
+  final connSub = ws.connection.listen((connected) {
     ref.read(appStatusProvider.notifier).setWsConnected(connected);
   });
-  ws.events.listen((event) => _handleWsEvent(ref, event));
-}
+  final eventSub = ws.events.listen((event) => _handleWsEvent(ref, event));
+  ref.keepAlive();
+  ref.onDispose(() {
+    connSub.cancel();
+    eventSub.cancel();
+  });
+});
 
-void _handleWsEvent(WidgetRef ref, WsEvent event) {
+void _handleWsEvent(Ref ref, WsEvent event) {
   final data = event.data;
   switch (event.signal) {
     case 'message::SendMessage':
