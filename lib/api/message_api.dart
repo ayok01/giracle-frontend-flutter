@@ -5,6 +5,27 @@ class MessageApi {
   MessageApi(this._api);
   final ApiClient _api;
 
+  Future<Message?> getOne(String channelId, String messageId) async {
+    try {
+      final json = await _api.getJson('/message/get/$channelId/$messageId');
+      final data = json['data'];
+      if (data is Map<String, dynamic>) return Message.fromJson(data);
+    } on ApiException {
+      return null;
+    } catch (_) {}
+    return null;
+  }
+
+  Future<List<String>> whoReacted(String messageId, String emojiCode) async {
+    final json = await _api.getJson(
+      '/message/who-reacted',
+      query: {'messageId': messageId, 'emojiCode': emojiCode},
+    );
+    return (json['data'] as List<dynamic>? ?? [])
+        .map((e) => e as String)
+        .toList();
+  }
+
   Future<Message> send(
     String channelId,
     String message, {

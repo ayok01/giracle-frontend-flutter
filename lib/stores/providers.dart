@@ -382,3 +382,19 @@ class CustomEmojiNotifier extends StateNotifier<Map<String, CustomEmoji>> {
 final customEmojiProvider =
     StateNotifierProvider<CustomEmojiNotifier, Map<String, CustomEmoji>>(
         (ref) => CustomEmojiNotifier());
+
+/// Cross-channel message cache keyed by messageId. Populated on demand when
+/// message links (`&<channelId:messageId>`) or replies target a message not
+/// in the current channel's history.
+class MessageFetchCacheNotifier extends StateNotifier<Map<String, Message>> {
+  MessageFetchCacheNotifier() : super(const {});
+  void upsert(Message m) => state = {...state, m.id: m};
+  Message? get(String id) => state[id];
+  final Set<String> _deleted = {};
+  bool isDeleted(String id) => _deleted.contains(id);
+  void markDeleted(String id) => _deleted.add(id);
+}
+
+final messageCacheProvider =
+    StateNotifierProvider<MessageFetchCacheNotifier, Map<String, Message>>(
+        (ref) => MessageFetchCacheNotifier());

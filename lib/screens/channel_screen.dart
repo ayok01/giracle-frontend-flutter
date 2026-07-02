@@ -8,6 +8,8 @@ import '../models/message.dart';
 import '../stores/providers.dart';
 import '../widgets/authed_image.dart';
 import '../widgets/message_content.dart';
+import '../widgets/message_link_preview.dart';
+import '../widgets/message_text.dart';
 import '../widgets/user_profile_sheet.dart';
 
 class ChannelScreen extends ConsumerStatefulWidget {
@@ -451,6 +453,20 @@ class _ChannelScreenState extends ConsumerState<ChannelScreen> {
             .read(messageApiProvider)
             .removeReaction(m.channelId, m.id, emojiCode);
       } else if (!alreadyMine) {
+        // Solid enforces at most 10 self reactions per message.
+        final myCount =
+            m.reactionSummary.where((r) => r.includingYou).length;
+        if (myCount >= 10) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content:
+                    Text('同一メッセージへのリアクションは 10 件までです'),
+              ),
+            );
+          }
+          return;
+        }
         await ref
             .read(messageApiProvider)
             .addReaction(m.channelId, m.id, emojiCode);
@@ -847,8 +863,20 @@ class MessageBubble extends StatelessWidget {
                         Padding(
                           padding: EdgeInsets.only(
                               top: showAvatar ? 2 : 0),
-                          child: SelectableText(message.content),
+                          child: Consumer(
+                            builder: (_, ref, __) => MessageText(
+                              content: message.content,
+                              myUserId: ref.watch(myUserProvider).id,
+                            ),
+                          ),
                         ),
+                      ...extractMessageLinks(message.content).map(
+                        (pair) => MessageLinkPreview(
+                          channelId: pair.$1,
+                          messageId: pair.$2,
+                          baseUrl: baseUrl,
+                        ),
+                      ),
                       if (message.files.isNotEmpty)
                         MessageAttachments(
                             files: message.files, baseUrl: baseUrl),
