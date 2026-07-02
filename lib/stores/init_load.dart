@@ -98,6 +98,25 @@ void _handleWsEvent(WidgetRef ref, WsEvent event) {
         }
       }
       break;
+    case 'message::AddReaction':
+    case 'message::DeleteReaction':
+      if (data is Map<String, dynamic>) {
+        final channelId = data['channelId'] as String?;
+        final messageId = data['messageId'] as String?;
+        final emojiCode = data['emojiCode'] as String?;
+        final actorId = data['userId'] as String? ?? '';
+        if (channelId == null || messageId == null || emojiCode == null) break;
+        final myId = ref.read(myUserProvider).id;
+        ref.read(historyProvider.notifier).applyReaction(
+              channelId: channelId,
+              messageId: messageId,
+              emojiCode: emojiCode,
+              add: event.signal == 'message::AddReaction',
+              actorUserId: actorId,
+              myUserId: myId,
+            );
+      }
+      break;
     case 'user::Connected':
       if (data is Map<String, dynamic>) {
         final id = data['userId'] as String?;

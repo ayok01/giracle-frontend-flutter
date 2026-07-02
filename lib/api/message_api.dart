@@ -27,13 +27,20 @@ class MessageApi {
       _api.postJson('/message/edit',
           body: {'messageId': messageId, 'message': content});
 
-  Future<void> addReaction(String messageId, String emojiCode) =>
-      _api.postJson('/message/reaction',
-          body: {'messageId': messageId, 'emojiCode': emojiCode});
+  Future<void> addReaction(String channelId, String messageId, String emojiCode) =>
+      _api.postJson('/message/emoji-reaction', body: {
+        'messageId': messageId,
+        'channelId': channelId,
+        'emojiCode': emojiCode,
+      });
 
-  Future<void> removeReaction(String messageId, String emojiCode) =>
-      _api.deleteJson('/message/reaction',
-          body: {'messageId': messageId, 'emojiCode': emojiCode});
+  Future<void> removeReaction(
+          String channelId, String messageId, String emojiCode) =>
+      _api.deleteJson('/message/delete-emoji-reaction', body: {
+        'messageId': messageId,
+        'channelId': channelId,
+        'emojiCode': emojiCode,
+      });
 
   Future<List<InboxItem>> inbox() async {
     final json = await _api.getJson('/message/inbox');

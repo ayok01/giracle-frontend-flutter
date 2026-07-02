@@ -228,6 +228,14 @@ class _ChannelScreenState extends ConsumerState<ChannelScreen> {
                 _startReply(m);
               },
             ),
+            ListTile(
+              leading: const Icon(Icons.emoji_emotions_outlined),
+              title: const Text('リアクションを追加'),
+              onTap: () {
+                Navigator.pop(ctx);
+                _openReactionPicker(m);
+              },
+            ),
             if (isMine)
               ListTile(
                 leading: const Icon(Icons.edit),
@@ -250,6 +258,67 @@ class _ChannelScreenState extends ConsumerState<ChannelScreen> {
         ),
       ),
     );
+  }
+
+  static const List<String> _quickReactions = [
+    '👍', '❤️', '😂', '😮', '😢', '🎉',
+    '🙏', '🔥', '✅', '👀', '💯', '👏',
+  ];
+
+  Future<void> _openReactionPicker(Message m) async {
+    final chosen = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: _quickReactions
+                .map((e) => InkWell(
+                      onTap: () => Navigator.pop(ctx, e),
+                      borderRadius: BorderRadius.circular(24),
+                      child: Padding(
+                        padding: const EdgeInsets.all(8),
+                        child: Text(e, style: const TextStyle(fontSize: 24)),
+                      ),
+                    ))
+                .toList(),
+          ),
+        ),
+      ),
+    );
+    if (chosen == null) return;
+    await _toggleReaction(m, chosen, forceAdd: true);
+  }
+
+  Future<void> _toggleReaction(
+    Message m,
+    String emojiCode, {
+    bool forceAdd = false,
+  }) async {
+    final existing = m.reactionSummary
+        .where((r) => r.emojiCode == emojiCode)
+        .toList();
+    final alreadyMine = existing.isNotEmpty && existing.first.includingYou;
+    final shouldRemove = alreadyMine && !forceAdd;
+    try {
+      if (shouldRemove) {
+        await ref
+            .read(messageApiProvider)
+            .removeReaction(m.channelId, m.id, emojiCode);
+      } else if (!alreadyMine) {
+        await ref
+            .read(messageApiProvider)
+            .addReaction(m.channelId, m.id, emojiCode);
+      }
+    } on ApiException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(e.message)));
+      }
+    }
   }
 
   Message? _findMessage(String id) {
@@ -322,6 +391,8 @@ class _ChannelScreenState extends ConsumerState<ChannelScreen> {
                                 replyTarget.userId,
                         onFetchUser: () => _fetchUser(m.userId),
                         onLongPress: () => _openActions(m),
+                        onToggleReaction: (code) => _toggleReaction(m, code),
+                        onAddReaction: () => _openReactionPicker(m),
                       );
                     },
                   ),
@@ -478,6 +549,8 @@ class MessageBubble extends StatelessWidget {
     required this.senderName,
     required this.onFetchUser,
     required this.onLongPress,
+    required this.onToggleReaction,
+    required this.onAddReaction,
     this.replyTarget,
     this.replyTargetSenderName,
   });
@@ -488,6 +561,8 @@ class MessageBubble extends StatelessWidget {
   final String? replyTargetSenderName;
   final VoidCallback onFetchUser;
   final VoidCallback onLongPress;
+  final ValueChanged<String> onToggleReaction;
+  final VoidCallback onAddReaction;
 
   @override
   Widget build(BuildContext context) {
@@ -550,20 +625,37 @@ class MessageBubble extends StatelessWidget {
             ),
             const SizedBox(height: 2),
             SelectableText(message.content),
-            if (message.reactionSummary.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(top: 4),
-                child: Wrap(
-                  spacing: 4,
-                  children: message.reactionSummary
-                      .map((r) => Chip(
-                            padding: EdgeInsets.zero,
-                            label: Text('${r.emojiCode} ${r.count}'),
-                            visualDensity: VisualDensity.compact,
-                          ))
-                      .toList(),
-                ),
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Wrap(
+                spacing: 4,
+                runSpacing: 4,
+                children: [
+                  ...message.reactionSummary.map((r) {
+                    final theme = Theme.of(context);
+                    return InputChip(
+                      padding: EdgeInsets.zero,
+                      visualDensity: VisualDensity.compact,
+                      selected: r.includingYou,
+                      showCheckmark: false,
+                      backgroundColor: r.includingYou
+                          ? theme.colorScheme.primaryContainer
+                          : null,
+                      label: Text('${r.emojiCode} ${r.count}'),
+                      onSelected: (_) => onToggleReaction(r.emojiCode),
+                    );
+                  }),
+                  if (message.reactionSummary.isNotEmpty)
+                    ActionChip(
+                      padding: EdgeInsets.zero,
+                      visualDensity: VisualDensity.compact,
+                      avatar: const Icon(Icons.add, size: 14),
+                      label: const Text(''),
+                      onPressed: onAddReaction,
+                    ),
+                ],
               ),
+            ),
           ],
         ),
       ),
