@@ -59,7 +59,14 @@ class _ChannelScreenState extends ConsumerState<ChannelScreen> {
 
   Future<void> _loadInitial() async {
     final entry = ref.read(historyProvider)[widget.channelId];
-    if (entry != null && entry.history.isNotEmpty) return;
+    // Fresh-fetch on first entry — otherwise sync new messages that arrived
+    // while the screen was popped (WS might have been paused, mobile
+    // background, etc). Solid clears history on reconnect for the same
+    // reason; here we do a targeted "newer than X" catch-up.
+    if (entry != null && entry.history.isNotEmpty) {
+      await _syncNewer(entry);
+      return;
+    }
     setState(() => _loadingHistory = true);
     try {
       final res = await ref
@@ -77,7 +84,6 @@ class _ChannelScreenState extends ConsumerState<ChannelScreen> {
         final info = await ref.read(channelApiProvider).info(widget.channelId);
         ref.read(channelInfoProvider.notifier).upsert(info);
       } catch (_) {}
-      // If we hit the latest, mark this channel read.
       if (res.history.isNotEmpty && res.atEnd) {
         final newest = res.history.first.createdAt.toIso8601String();
         _markRead(newest);
@@ -86,6 +92,42 @@ class _ChannelScreenState extends ConsumerState<ChannelScreen> {
       setState(() => _error = e.message);
     } finally {
       if (mounted) setState(() => _loadingHistory = false);
+    }
+  }
+
+  Future<void> _syncNewer(HistoryEntry entry) async {
+    if (entry.history.isEmpty) return;
+    try {
+      final newest = entry.history.first; // reverse order — index 0 is newest
+      final res = await ref.read(channelApiProvider).getHistory(
+            widget.channelId,
+            messageIdFrom: newest.id,
+            fetchLength: 30,
+            fetchDirection: 'newer',
+          );
+      // API returns the anchor + newer items. Drop the anchor and drop
+      // anything we already have (WS may have delivered it already).
+      final existingIds = entry.history.map((m) => m.id).toSet();
+      final incoming = res.history
+          .where((m) => m.id != newest.id && !existingIds.contains(m.id))
+          .toList();
+      if (incoming.isEmpty && entry.atEnd == res.atEnd) return;
+      ref.read(historyProvider.notifier).setHistory(
+            widget.channelId,
+            HistoryEntry(
+              history: [...incoming, ...entry.history],
+              atTop: entry.atTop,
+              atEnd: res.atEnd,
+            ),
+          );
+      if (res.atEnd) {
+        final ts = (incoming.isNotEmpty ? incoming.first : newest)
+            .createdAt
+            .toIso8601String();
+        _markRead(ts);
+      }
+    } on ApiException catch (e) {
+      debugPrint('syncNewer err: ${e.message}');
     }
   }
 
