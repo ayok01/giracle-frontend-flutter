@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../api/api_client.dart';
 import '../models/message.dart';
 import '../stores/providers.dart';
+import '../utils/emoji_shortcodes.dart';
 import '../widgets/authed_image.dart';
 import '../widgets/message_content.dart';
 import '../widgets/message_link_preview.dart';
@@ -404,31 +405,85 @@ class _ChannelScreenState extends ConsumerState<ChannelScreen> {
     );
   }
 
-  static const List<String> _quickReactions = [
-    '👍', '❤️', '😂', '😮', '😢', '🎉',
-    '🙏', '🔥', '✅', '👀', '💯', '👏',
+  // Shortcodes (emojibase) paired with the emoji character rendered on the
+  // quick-picker chip. Sending the shortcode keeps the server payload
+  // compatible with what the Solid client (emoji-picker-element) sends.
+  static const List<(String, String)> _quickReactions = [
+    ('thumbs_up', '👍'),
+    ('red_heart', '❤️'),
+    ('tears_of_joy', '😂'),
+    ('open_mouth', '😮'),
+    ('crying_face', '😢'),
+    ('party_popper', '🎉'),
+    ('folded_hands', '🙏'),
+    ('fire', '🔥'),
+    ('check_mark_button', '✅'),
+    ('eyes', '👀'),
+    ('hundred_points', '💯'),
+    ('clapping_hands', '👏'),
   ];
 
   Future<void> _openReactionPicker(Message m) async {
+    final customEmojis =
+        ref.read(customEmojiProvider).values.toList();
+    final base = ref.read(apiClientProvider).baseUrl;
     final chosen = await showModalBottomSheet<String>(
       context: context,
       showDragHandle: true,
       builder: (ctx) => SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(12),
-          child: Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: _quickReactions
-                .map((e) => InkWell(
-                      onTap: () => Navigator.pop(ctx, e),
-                      borderRadius: BorderRadius.circular(24),
-                      child: Padding(
-                        padding: const EdgeInsets.all(8),
-                        child: Text(e, style: const TextStyle(fontSize: 24)),
-                      ),
-                    ))
-                .toList(),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('リアクション',
+                  style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: _quickReactions
+                    .map((entry) => InkWell(
+                          onTap: () => Navigator.pop(ctx, entry.$1),
+                          borderRadius: BorderRadius.circular(24),
+                          child: Padding(
+                            padding: const EdgeInsets.all(8),
+                            child: Text(entry.$2,
+                                style: const TextStyle(fontSize: 24)),
+                          ),
+                        ))
+                    .toList(),
+              ),
+              if (customEmojis.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                const Text('カスタム絵文字',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: customEmojis
+                      .map((e) => InkWell(
+                            onTap: () => Navigator.pop(ctx, e.code),
+                            borderRadius: BorderRadius.circular(6),
+                            child: Padding(
+                              padding: const EdgeInsets.all(4),
+                              child: SizedBox(
+                                height: 28,
+                                width: 28,
+                                child: AuthedNetworkImage(
+                                  url: '$base/server/custom-emoji/${e.code}',
+                                  errorWidget: (_, __) =>
+                                      Text(':${e.code}:'),
+                                ),
+                              ),
+                            ),
+                          ))
+                      .toList(),
+                ),
+              ],
+            ],
           ),
         ),
       ),
@@ -988,7 +1043,7 @@ class _ReplyLine extends StatelessWidget {
   }
 }
 
-class _ReactionChip extends StatelessWidget {
+class _ReactionChip extends ConsumerWidget {
   const _ReactionChip({
     required this.code,
     required this.count,
@@ -1005,8 +1060,13 @@ class _ReactionChip extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    // Solid stores reactions as emojibase shortcodes (`event.detail.emoji.
+    // shortcodes[0]`). Custom emojis fall back to the server image endpoint.
+    final unicode = isCustom
+        ? null
+        : ref.watch(emojiShortcodesProvider).lookup(code);
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(6),
@@ -1036,12 +1096,12 @@ class _ReactionChip extends StatelessWidget {
                 ),
               )
             else
-              Text(code, style: const TextStyle(fontSize: 14)),
+              Text(
+                unicode ?? ':$code:',
+                style: const TextStyle(fontSize: 16),
+              ),
             const SizedBox(width: 4),
-            Text(
-              '$count',
-              style: theme.textTheme.bodySmall,
-            ),
+            Text('$count', style: theme.textTheme.bodySmall),
           ],
         ),
       ),
